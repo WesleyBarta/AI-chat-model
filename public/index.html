@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NexusMind</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --bg:#0a0a0f;--bg2:#12121a;--bg3:#1a1a25;
+      --c:#00f0ff;--m:#ff00aa;--p:#8b5cf6;
+      --t:#e0e8f0;--t2:#8892a4;--t3:#4a5568;
+      --gc:0 0 20px rgba(0,240,255,.5),0 0 40px rgba(0,240,255,.3);
+      --gm:0 0 20px rgba(255,0,170,.5),0 0 40px rgba(255,0,170,.3);
+      --f1:'JetBrains Mono',monospace;--f2:'Orbitron',sans-serif
+    }
+    html,body{height:100%;overflow:hidden}
+    body{font-family:var(--f1);background:var(--bg);color:var(--t);display:flex;flex-direction:column}
+    body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.1) 2px,rgba(0,0,0,.1) 4px);pointer-events:none;z-index:9999}
+    body::after{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,240,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,240,255,.03) 1px,transparent 1px);background-size:50px 50px;pointer-events:none;z-index:-1}
+    @keyframes s{to{transform:rotate(360deg)}}
+    @keyframes p{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.7;transform:scale(1.2)}}
+    @keyframes b{0%,100%{opacity:1}50%{opacity:.3}}
+    @keyframes tb{0%,60%,100%{transform:translateY(0);opacity:.5}30%{transform:translateY(-6px);opacity:1}}
+    @keyframes f{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes sl{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes fl{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+
+    .header{background:linear-gradient(180deg,var(--bg2) 0%,transparent 100%);padding:1rem 1.5rem;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(0,240,255,.2);position:relative;z-index:100}
+    .logo{display:flex;align-items:center;gap:.75rem}
+    .logo-icon{width:40px;height:40px}
+    .logo-icon svg{width:100%;height:100%;filter:drop-shadow(var(--gc))}
+    .logo-text{font-family:var(--f2);font-size:1.5rem;font-weight:900;background:linear-gradient(135deg,var(--c),var(--m));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-transform:uppercase;letter-spacing:.1em}
+    .status-bar{display:flex;align-items:center;gap:1.5rem}
+    .status-item{display:flex;align-items:center;gap:.5rem;font-size:.75rem;color:var(--t2)}
+    .dot{width:8px;height:8px;border-radius:50%;background:var(--t3);transition:all .3s}
+    .dot.ready{background:#0f8;box-shadow:0 0 10px rgba(0,255,136,.8);animation:p 2s ease-in-out infinite}
+    .dot.loading{background:#fa0;box-shadow:0 0 10px rgba(255,170,0,.8);animation:b .5s ease-in-out infinite}
+    .dot.error{background:#f44}
+    .header-actions{display:flex;gap:.5rem}
+    .ibtn{width:36px;height:36px;border:1px solid rgba(0,240,255,.3);background:rgba(0,240,255,.05);border-radius:8px;color:var(--c);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s}
+    .ibtn:hover{background:rgba(0,240,255,.15);box-shadow:var(--gc);transform:translateY(-2px)}
+    .ibtn svg{width:18px;height:18px}
+
+    .main{flex:1;overflow:hidden;display:flex;flex-direction:column}
+    .chat{flex:1;overflow-y:auto;padding:1.5rem;display:flex;flex-direction:column;gap:1rem;scroll-behavior:smooth}
+    .chat::-webkit-scrollbar{width:6px}.chat::-webkit-scrollbar-track{background:var(--bg2)}.chat::-webkit-scrollbar-thumb{background:var(--c);border-radius:3px}
+
+    .welcome{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;text-align:center;gap:1.5rem;animation:f .5s ease}
+    .welcome-icon{width:80px;height:80px;animation:fl 3s ease-in-out infinite}
+    .welcome h2{font-family:var(--f2);font-size:1.5rem;color:var(--c);text-shadow:var(--gc)}
+    .welcome p{color:var(--t2);max-width:400px;line-height:1.6}
+
+    .message{display:flex;gap:.75rem;max-width:85%;animation:sl .3s ease}
+    .message.user{align-self:flex-end;flex-direction:row-reverse}
+    .message.ai{align-self:flex-start}
+    .avatar{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1rem}
+    .message.user .avatar{background:linear-gradient(135deg,var(--c),#088);box-shadow:var(--gc)}
+    .message.ai .avatar{background:linear-gradient(135deg,var(--m),#a06);box-shadow:var(--gm)}
+    .content{padding:.875rem 1.25rem;border-radius:16px;line-height:1.6;font-size:.9rem;position:relative}
+    .message.user .content{background:linear-gradient(135deg,rgba(0,240,255,.2),rgba(0,136,170,.3));border:1px solid rgba(0,240,255,.4);border-top-right-radius:4px}
+    .message.ai .content{background:linear-gradient(135deg,rgba(255,0,170,.2),rgba(139,92,246,.2));border:1px solid rgba(255,0,170,.3);border-top-left-radius:4px}
+    .content pre{background:rgba(0,0,0,.4);border-radius:8px;padding:.75rem;margin:.5rem 0;overflow-x:auto;font-size:.8rem}
+    .content code{background:rgba(0,240,255,.1);padding:.1rem .3rem;border-radius:4px;font-size:.85em}
+    .content pre code{background:transparent;padding:0}
+    .time{font-size:.65rem;color:var(--t3);margin-top:.25rem}
+    .message.user .time{text-align:right}.message.ai .time{text-align:left}
+
+    .typing{display:flex;gap:.75rem;align-self:flex-start;animation:sl .3s ease}
+    .typing-dots{display:flex;align-items:center;gap:4px;padding:1rem;background:var(--bg2);border-radius:16px;border:1px solid rgba(255,0,170,.2)}
+    .typing-dots span{width:8px;height:8px;border-radius:50%;background:var(--m);animation:tb 1.4s ease-in-out infinite}
+    .typing-dots span:nth-child(2){animation-delay:.2s}.typing-dots span:nth-child(3){animation-delay:.4s}
+    .sys{text-align:center;padding:.5rem 1rem;font-size:.75rem;color:var(--t3);animation:f .3s ease}
+
+    .input-area{background:linear-gradient(0deg,var(--bg2) 0%,transparent 100%);padding:1rem 1.5rem 1.5rem;border-top:1px solid rgba(0,240,255,.1)}
+    .mode-s{display:flex;justify-content:center;gap:.5rem;margin-bottom:1rem}
+    .mbtn{padding:.5rem 1rem;background:var(--bg3);border:1px solid rgba(0,240,255,.2);border-radius:20px;color:var(--t2);font-family:var(--f1);font-size:.75rem;cursor:pointer;transition:all .2s}
+    .mbtn:hover{border-color:var(--c);color:var(--c)}
+    .mbtn.active{background:rgba(0,240,255,.1);border-color:var(--c);color:var(--c);box-shadow:var(--gc)}
+    .input-c{display:flex;gap:.75rem;align-items:flex-end;background:var(--bg3);border:1px solid rgba(0,240,255,.2);border-radius:16px;padding:.75rem;transition:all .3s}
+    .input-c:focus-within{border-color:var(--c);box-shadow:var(--gc)}
+    .input-c textarea{flex:1;background:transparent;border:none;outline:none;color:var(--t);font-family:var(--f1);font-size:.9rem;resize:none;max-height:120px;line-height:1.5;padding:.25rem}
+    .input-c textarea::placeholder{color:var(--t3)}
+    .vbtn{width:40px;height:40px;border:1px solid rgba(0,240,255,.3);background:rgba(0,240,255,.05);border-radius:50%;color:var(--c);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0}
+    .vbtn:hover{background:rgba(0,240,255,.15);box-shadow:var(--gc)}
+    .vbtn.recording{background:rgba(255,0,100,.2);border-color:#f06;color:#f06;animation:p 1s ease-in-out infinite}
+    .sbtn{width:40px;height:40px;border:none;background:linear-gradient(135deg,var(--c),var(--p));border-radius:50%;color:var(--bg);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0}
+    .sbtn:hover{transform:scale(1.1);box-shadow:var(--gc)}.sbtn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+
+    .panel{position:fixed;top:0;right:-320px;width:320px;height:100%;background:var(--bg2);border-left:1px solid rgba(0,240,255,.2);padding:1.5rem;z-index:1000;transition:right .3s ease;overflow-y:auto}
+    .panel.open{right:0}
+    .ptitle{font-family:var(--f2);font-size:1rem;color:var(--c);margin-bottom:1.5rem;display:flex;align-items:center;justify-content:space-between}
+    .pclose{background:none;border:none;color:var(--t2);cursor:pointer;font-size:1.25rem}
+    .sitem{margin-bottom:1.25rem}
+    .slbl{font-size:.75rem;color:var(--t2);margin-bottom:.5rem;display:block}
+    .stog{display:flex;align-items:center;gap:.75rem}
+    .tsw{width:44px;height:24px;background:var(--bg3);border-radius:12px;position:relative;cursor:pointer;transition:all .3s;border:1px solid rgba(0,240,255,.2)}
+    .tsw::after{content:'';position:absolute;width:18px;height:18px;border-radius:50%;background:var(--t2);top:2px;left:2px;transition:all .3s}
+    .tsw.active{background:rgba(0,240,255,.2)}.tsw.active::after{left:22px;background:var(--c);box-shadow:var(--gc)}
+    .tlbl{font-size:.8rem;color:var(--t)}
+    .range-in{width:100%}
+    .kbstat{font-size:.7rem;color:var(--t3);padding:.5rem;background:var(--bg3);border-radius:8px;margin-top:.5rem}
+    .kbc{color:var(--c);font-weight:500}
+    textarea{width:100%;background:var(--bg3);border:1px solid rgba(0,240,255,.2);border-radius:8px;color:var(--t);font-family:var(--f1);font-size:.8rem;padding:.5rem;resize:vertical;min-height:60px}
+    .pbtn{width:100%;padding:.5rem;background:rgba(0,240,255,.1);border:1px solid var(--c);border-radius:8px;color:var(--c);cursor:pointer;font-family:var(--f1);font-size:.75rem;margin-top:.5rem;transition:all .2s}
+    .pbtn:hover{background:rgba(0,240,255,.2)}
+    select{width:100%;background:var(--bg3);border:1px solid rgba(0,240,255,.2);border-radius:8px;color:var(--t);font-family:var(--f1);font-size:.8rem;padding:.5rem;margin-top:.25rem}
+    input[type="text"]{width:100%;background:var(--bg3);border:1px solid rgba(0,240,255,.2);border-radius:8px;color:var(--t);font-family:var(--f1);font-size:.8rem;padding:.5rem;margin-top:.25rem}
+
+    .overlay{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:10000;transition:opacity .5s ease}
+    .overlay.hidden{opacity:0;pointer-events:none}
+    .loader{width:80px;height:80px;position:relative;margin-bottom:2rem}
+    .lr{position:absolute;inset:0;border:3px solid transparent;border-top-color:var(--c);border-radius:50%;animation:s 1s linear infinite}
+    .lr:nth-child(2){inset:8px;border-top-color:var(--m);animation-delay:-.5s;animation-direction:reverse}
+    .lr:nth-child(3){inset:16px;border-top-color:var(--p);animation-delay:-.25s}
+    .lt{font-family:var(--f2);color:var(--c);font-size:1rem;text-transform:uppercase;letter-spacing:.2em;margin-bottom:1rem}
+    .ls{font-size:.8rem;color:var(--t2);max-width:300px;text-align:center}
+    .pbar{width:200px;height:4px;background:var(--bg3);border-radius:2px;margin-top:1rem;overflow:hidden}
+    .pfill{height:100%;background:linear-gradient(90deg,var(--c),var(--m));width:0;transition:width .3s ease}
+    .badge{display:inline-block;padding:.2rem .5rem;border-radius:10px;font-size:.65rem;margin-left:.5rem;font-weight:500}
+    .badge.pos{background:rgba(0,255,136,.2);color:#0f8}
+    .badge.neg{background:rgba(255,68,68,.2);color:#f44}
+    .toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--bg3);border:1px solid rgba(0,240,255,.3);padding:.75rem 1.5rem;border-radius:8px;font-size:.85rem;color:var(--t);opacity:0;transition:all .3s;z-index:1000}
+    .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+    @media(max-width:640px){.header{padding:.75rem}.logo-text{font-size:1.1rem}.status-bar{display:none}.chat{padding:1rem}.message{max-width:95%}.welcome-icon{width:60px}.panel{width:100%;right:-100%}}
+  </style>
+</head>
+<body>
+
+<div class="overlay" id="loadingOverlay">
+  <div class="loader"><div class="lr"></div><div class="lr"></div><div class="lr"></div></div>
+  <div class="lt">Initializing NexusMind</div>
+  <div class="ls" id="loadingStatus">Loading WebAssembly runtime...</div>
+  <div class="pbar"><div class="pfill" id="progressFill"></div></div>
+</div>
+
+<header class="header">
+  <div class="logo">
+    <div class="logo-icon">
+      <svg viewBox="0 0 40 40" fill="none">
+        <circle cx="20" cy="20" r="18" stroke="url(#g)" stroke-width="2" fill="none"/>
+        <circle cx="20" cy="20" r="8" fill="url(#g)"/>
+        <path d="M20 2 L20 10 M20 30 L20 38 M2 20 L10 20 M30 20 L38 20" stroke="url(#g)" stroke-width="2"/>
+        <defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#00f0ff"/><stop offset="100%" stop-color="#ff00aa"/></linearGradient></defs>
+      </svg>
+    </div>
+    <span class="logo-text">NexusMind</span>
+  </div>
+  <div class="status-bar">
+    <div class="status-item"><span class="dot" id="wasmStatus"></span><span>Wasm</span></div>
+    <div class="status-item"><span class="dot" id="ollamaStatus"></span><span>Ollama</span></div>
+    <div class="status-item"><span class="dot" id="modelStatus"></span><span>Model</span></div>
+    <div class="status-item"><span class="dot" id="voiceStatus"></span><span>Voice</span></div>
+  </div>
+  <div class="header-actions">
+    <button class="ibtn" id="clearBtn" title="Clear chat">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z"/></svg>
+    </button>
+    <button class="ibtn" id="downloadBtn" title="Export chat">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+    </button>
+    <button class="ibtn" id="settingsBtn" title="Settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+    </button>
+  </div>
+</header>
+
+<main class="main">
+  <div class="chat" id="chatContainer">
+    <div class="welcome" id="welcome">
+      <svg class="welcome-icon" viewBox="0 0 80 80" fill="none">
+        <circle cx="40" cy="40" r="35" stroke="url(#wg)" stroke-width="2" fill="none"/>
+        <circle cx="40" cy="40" r="20" fill="url(#wg)" opacity=".3"/>
+        <circle cx="40" cy="40" r="10" fill="url(#wg)"/>
+        <path d="M40 5 L40 15 M40 65 L40 75 M5 40 L15 40 M65 40 L75 40" stroke="url(#wg)" stroke-width="2"/>
+        <defs><linearGradient id="wg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#00f0ff"/><stop offset="100%" stop-color="#ff00aa"/></linearGradient></defs>
+      </svg>
+      <h2>Welcome to NexusMind</h2>
+      <p>Your offline AI assistant powered by Ollama. Ask me anything!</p>
+    </div>
+  </div>
+</main>
+
+<div class="input-area">
+  <div class="mode-s">
+    <button class="mbtn active" data-mode="assistant">Assistant</button>
+    <button class="mbtn" data-mode="analyzer">Analyzer</button>
+    <button class="mbtn" data-mode="summarizer">Summarizer</button>
+  </div>
+  <div class="input-c">
+    <textarea id="messageInput" placeholder="Type your message..." rows="1"></textarea>
+    <button class="vbtn" id="voiceBtn" title="Voice">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2M12 19v4M8 23h8"/></svg>
+    </button>
+    <button class="sbtn" id="sendBtn" title="Send">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+    </button>
+  </div>
+</div>
+
+<div class="panel" id="settingsPanel">
+  <div class="ptitle"><span>Settings</span><button class="pclose" id="settingsClose">×</button></div>
+
+  <div class="sitem"><span class="slbl">Voice Output</span><div class="stog"><div class="tsw" id="voiceOutputToggle"></div><span class="tlbl">Speak AI responses</span></div></div>
+  <div class="sitem"><span class="slbl">Auto-send on Enter</span><div class="stog"><div class="tsw active" id="autoSendToggle"></div><span class="tlbl">Send on Enter</span></div></div>
+  <div class="sitem"><span class="slbl">Show Sentiment</span><div class="stog"><div class="tsw active" id="sentimentToggle"></div><span class="tlbl">Display sentiment</span></div></div>
+  <div class="sitem"><span class="slbl">Max Response Length</span><input type="range" id="maxLengthSlider" class="range-in" min="50" max="1000" value="500"><span class="tlbl" id="maxLengthValue">500 tokens</span></div>
+  <div class="sitem"><span class="slbl">Temperature</span><input type="range" id="temperatureSlider" class="range-in" min="10" max="90" value="50"><span class="tlbl" id="temperatureValue">0.50</span></div>
+
+  <div class="sitem"><span class="slbl">AI Provider</span>
+    <div style="display:flex;gap:.5rem;margin-top:.5rem">
+      <button class="mbtn" id="providerWasm" style="flex:1">Wasm</button>
+      <button class="mbtn active" id="providerOllama" style="flex:1">Ollama</button>
+    </div>
+  </div>
+  <div class="sitem"><span class="slbl">Ollama Model</span>
+    <select id="ollamaModelSelect">
+      <option value="llama3.2">llama3.2</option>
+      <option value="llama3.1">llama3.1</option>
+      <option value="mistral">mistral</option>
+      <option value="codellama">codellama</option>
+      <option value="phi3">phi3</option>
+      <option value="qwen2.5">qwen2.5</option>
+    </select>
+  </div>
+  <div class="sitem"><span class="slbl">Ollama URL</span>
+    <input type="text" id="ollamaUrlInput" value="http://localhost:11434">
+  </div>
+
+  <div class="sitem"><span class="slbl">Knowledge Base</span><div class="kbstat"><span class="kbc" id="kbCount">0</span> entries</div></div>
+  <div class="sitem"><span class="slbl">Add Knowledge</span>
+    <textarea id="kbInput" placeholder="Paste facts, code, or info..."></textarea>
+    <button class="pbtn" id="kbAddBtn">Add to Knowledge Base</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+  import { init } from '/src/app.js';
+  init();
+</script>
+</body>
+</html>

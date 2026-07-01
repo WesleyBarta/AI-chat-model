@@ -1,14 +1,17 @@
-// ollama.js - Ollama API client
+// ollama.js - Ollama API client (via local proxy server)
 import { CONFIG, SYSTEM_PROMPT } from './constants.js';
 
+const API_BASE = `http://localhost:${CONFIG.SERVER_PORT || 3000}/api`;
+
+// Check if Ollama is available via proxy
 export async function checkOllamaStatus() {
   try {
-    const res = await fetch(`${CONFIG.OLLAMA_URL}/api/tags`, {
+    const res = await fetch(`${API_BASE}/status`, {
       signal: AbortSignal.timeout(3000)
     });
     if (!res.ok) return { available: false, models: [] };
     const data = await res.json();
-    return { available: true, models: data.models || [] };
+    return { available: data.available, models: data.models || [] };
   } catch {
     return { available: false, models: [] };
   }
@@ -39,7 +42,7 @@ export async function generateResponse(userMessage, chatHistory, settings, searc
   const kbContext = await buildKBContext(searchKB, userMessage);
   const messages = buildMessages(userMessage, chatHistory, kbContext);
 
-  const res = await fetch(`${CONFIG.OLLAMA_URL}/api/chat`, {
+  const res = await fetch(`${API_BASE}/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -57,17 +60,18 @@ export async function generateResponse(userMessage, chatHistory, settings, searc
     signal: AbortSignal.timeout(CONFIG.OLLAMA_TIMEOUT)
   });
 
-  if (!res.ok) throw new Error(`Ollama error: ${res.status}`);
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
   const data = await res.json();
+  if (data.error) throw new Error(data.error);
   return data.message?.content || '';
 }
 
-// Streaming request
+// Streaming request — yields tokens as they arrive
 export async function* streamResponse(userMessage, chatHistory, settings, searchKB) {
   const kbContext = await buildKBContext(searchKB, userMessage);
   const messages = buildMessages(userMessage, chatHistory, kbContext);
 
-  const res = await fetch(`${CONFIG.OLLAMA_URL}/api/chat`, {
+  const res = await fetch(`${API_BASE}/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -84,7 +88,7 @@ export async function* streamResponse(userMessage, chatHistory, settings, search
     })
   });
 
-  if (!res.ok) throw new Error(`Ollama error: ${res.status}`);
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
 
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
@@ -112,10 +116,10 @@ export async function* streamResponse(userMessage, chatHistory, settings, search
   }
 }
 
-// Warm-up
+// Warm-up — lightweight ping to load model into memory
 export async function warmUp(settings) {
   try {
-    await fetch(`${CONFIG.OLLAMA_URL}/api/chat`, {
+    await fetch(`${API_BASE}/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -129,14 +133,13 @@ export async function warmUp(settings) {
   } catch {}
 }
 
-// --- Internal helpers ---
+// ─── Internal helpers ──────────────────────────────────────────
 
 async function buildKBContext(searchKB, query) {
   if (!searchKB) return null;
   try {
     const results = await searchKB(query);
     if (!results.length) return null;
-    // Inject top 3 most relevant KB entries
     const facts = results.slice(0, 3).map(r => `- ${r.text}`).join('\n');
     return `Relevant facts:\n${facts}`;
   } catch {

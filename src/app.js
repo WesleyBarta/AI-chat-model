@@ -7,6 +7,8 @@ import { CONFIG, AI_MODES, PROVIDERS } from './constants.js';
 let db = null;
 let chatHistory = [];
 let currentMode = AI_MODES.ASSISTANT;
+let discordEnabled = true; // Bot control — enable/disable from UI
+let discordActivity = [];  // Recent Discord activity log
 let settings = {
   voiceOutput: false,
   autoSend: true,
@@ -34,7 +36,11 @@ const dom = {
   modelStatus: $('modelStatus'),
   voiceStatus: $('voiceStatus'),
   settingsPanel: $('settingsPanel'),
-  toast: $('toast')
+  toast: $('toast'),
+  discordDot: $('discordDot'),
+  discordStatusText: $('discordStatusText'),
+  discordActivity: $('discordActivity'),
+  discordLog: $('discordLog')
 };
 
 // ============ IndexedDB ============
@@ -314,8 +320,50 @@ function setupSettings() {
     settings.ollamaModel = e.target.value;
     showToast(`Model: ${settings.ollamaModel}`);
   });
+
+  // Discord bot controls
+  $('discordOnBtn')?.addEventListener('click', () => {
+    discordEnabled = true;
+    updateDiscordStatus();
+    showToast('Discord bot enabled');
+  });
+
+  $('discordOffBtn')?.addEventListener('click', () => {
+    discordEnabled = false;
+    updateDiscordStatus();
+    showToast('Discord bot disabled');
+  });
 }
 
+// ============ Discord Bot Controls ============
+function updateDiscordStatus() {
+  if (!dom.discordDot) return;
+  if (discordEnabled) {
+    dom.discordDot.className = 'dot ready';
+    dom.discordStatusText.textContent = 'Bot Active';
+    dom.discordOnBtn?.classList.add('active');
+  } else {
+    dom.discordDot.className = 'dot error';
+    dom.discordStatusText.textContent = 'Bot Disabled';
+  }
+}
+
+function addDiscordActivity(role, text) {
+  if (!dom.discordActivity) return;
+  const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  discordActivity.unshift({ role, text, time });
+  if (discordActivity.length > 20) discordActivity.pop();
+
+  dom.discordActivity.innerHTML = discordActivity.map(a => `
+    <div class="discord-msg">
+      <span class="${a.role}">${a.role === 'user' ? 'User' : 'Bot'}</span>
+      <span class="time">${a.time}</span>
+      <div>${a.text.substring(0, 80)}${a.text.length > 80 ? '...' : ''}</div>
+    </div>
+  `).join('');
+}
+
+// ============ Toggle Helper ============
 function toggle(id, obj, key, label) {
   const el = $(id);
   if (!el) return;
@@ -441,6 +489,7 @@ async function init() {
 
     bindEvents();
     setupSettings();
+    updateDiscordStatus();
     dom.messageInput.focus();
 
   } catch (err) {
